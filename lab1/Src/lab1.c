@@ -14,9 +14,21 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
+  HAL_Init(); //reset of all peripherals, Initializes the Flash interface and the Systick.
+  SystemClock_Config(); //config system clock
+
+  __HAL_RCC_GPIOC_CLK_ENABLE(); //enable clock for GPIOC
+  GPIO_InitTypeDef initStr = {GPIO_PIN_8 | GPIO_PIN_9, 
+                              GPIO_MODE_OUTPUT_PP, 
+                              GPIO_NOPULL, 
+                              GPIO_SPEED_FREQ_LOW};
+
+  HAL_GPIO_Init(GPIOC, &initStr); //initialize GPIOC pins 8 and 9
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); //set pin 8 high
   while (1)
   {
- 
+    HAL_Delay(200);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8); //toggle the output of pin 8 and 9
   }
   return -1;
 }
