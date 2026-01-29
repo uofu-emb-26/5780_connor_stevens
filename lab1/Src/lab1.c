@@ -1,5 +1,6 @@
 #include "main.h"
 #include "stm32f0xx_hal.h"
+#include <assert.h>
 
 void SystemClock_Config(void);
 
@@ -25,6 +26,8 @@ int main(void)
 
   HAL_GPIO_Init(GPIOC, &initStr); //initialize GPIOC pins 8 and 9
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); //set pin 8 high
+  assert(((GPIOC->MODER >> (8*2)) & 0x3) == 0x1); //assert PC8 (Orange LED) is in output mode (01)
+  assert(((GPIOC->MODER >> (9*2)) & 0x3) == 0x1); //assert PC9 (Green LED) is in output mode (01)
   while (1)
   {
     HAL_Delay(200);
