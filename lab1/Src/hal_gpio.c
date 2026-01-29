@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stm32f0xx_hal.h>
 #include <stm32f0xx_hal_gpio.h>
+#include <hal_gpio.h>
 
 void My_HAL_GPIO_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
 {
@@ -21,9 +22,15 @@ void My_HAL_GPIO_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
     //Setting User Button to pull-down resistor (10)
     GPIOA->PUPDR &= ~0x1; // Sets PUPDR[x][0] to 0 for PA0 (User Button)
     GPIOA->PUPDR |= (1 << 1); // Sets PUPDR[x][1] to 1 for PA0 (User Button)
+
+    // Set LEDs initial state: Orange ON, Red, Green, and Blue OFF
+    GPIOC->ODR |= (1 << 9); //set PC9 high (Green LEDs)
+    GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8)); //set PC6, PC7, and PC8 low (Red, Green, and Blue LEDs)
 }
-
-
+void HAL_RCC_GPIOC_CLK_ENABLE(void)
+{
+    RCC->AHBENR |= (1 << 19); // Enable GPIOC clock bit (bit 19)
+}
 /*
 void My_HAL_GPIO_DeInit(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 {
@@ -43,8 +50,9 @@ void My_HAL_GPIO_WritePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, GPIO_PinState 
 }
 */
 
-/*
+
 void My_HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
 {
+    GPIOx->ODR ^= GPIO_Pin; // Toggle the output data register for the passed pin(s)
 }
-*/
+

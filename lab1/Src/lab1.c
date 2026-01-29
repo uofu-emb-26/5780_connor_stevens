@@ -1,6 +1,7 @@
 #include "main.h"
 #include "stm32f0xx_hal.h"
 #include <assert.h>
+#include <hal_gpio.h>
 
 void SystemClock_Config(void);
 
@@ -18,20 +19,31 @@ int main(void)
   HAL_Init(); //reset of all peripherals, Initializes the Flash interface and the Systick.
   SystemClock_Config(); //config system clock
 
-  __HAL_RCC_GPIOC_CLK_ENABLE(); //enable clock for GPIOC
-  GPIO_InitTypeDef initStr = {GPIO_PIN_8 | GPIO_PIN_9, 
+  HAL_RCC_GPIOC_CLK_ENABLE(); //enable GPIOC clock
+  assert(((RCC->AHBENR >> 19) & 0x1) == 1); //assert GPIOC clock is enabled
+  GPIO_InitTypeDef initStr = {GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_6 | GPIO_PIN_7, 
                               GPIO_MODE_OUTPUT_PP, 
                               GPIO_NOPULL, 
                               GPIO_SPEED_FREQ_LOW};
-
-  HAL_GPIO_Init(GPIOC, &initStr); //initialize GPIOC pins 8 and 9
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); //set pin 8 high
+  My_HAL_GPIO_Init(GPIOC, &initStr); //initialize GPIOC pins 6, 7, 8, and 9
   assert(((GPIOC->MODER >> (8*2)) & 0x3) == 0x1); //assert PC8 (Orange LED) is in output mode (01)
   assert(((GPIOC->MODER >> (9*2)) & 0x3) == 0x1); //assert PC9 (Green LED) is in output mode (01)
+  assert(((GPIOC->MODER >> (6*2)) & 0x3) == 0x1); //assert PC6 (Blue LED) is in output mode (01)
+  assert(((GPIOC->MODER >> (7*2)) & 0x3) == 0x1); //assert PC7 (Red LED) is in output mode (01)
+  assert(((GPIOC->ODR >> 9) & 0x1) == 0x1); //assert Green LED is enabled
+  assert(((GPIOC->ODR >> 6) & 0x1) == 0x0); //assert Red LED is disabled
+  assert(((GPIOC->ODR >> 7) & 0x1) == 0x0); //assert Blue LED is disabled
+  assert(((GPIOC->ODR >> 8) & 0x1) == 0x0); //assert Orange LED is disabled
   while (1)
   {
     HAL_Delay(200);
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_8); //toggle the output of pin 8 and 9
+    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_9); 
+    HAL_Delay(200);
+    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_6);
+    HAL_Delay(200);
+    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7 | GPIO_PIN_8);
+    HAL_Delay(200);
+    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_7);
   }
   return -1;
 }
