@@ -20,29 +20,38 @@ void My_HAL_GPIO_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
     // Disable pull-up/pull-down resistors for PC6,7,8,9(LEDs Red, Orange, Green, Blue) (00)
     GPIOC->PUPDR &= ~((3 << 12) | (3 << 14) | (3 << 16) | (3 << 18)); // Sets PUPDR[x] to 0 for PC6,7,8,9
     //Setting User Button to pull-down resistor (10)
-    GPIOA->PUPDR &= ~0x1; // Sets PUPDR[x][0] to 0 for PA0 (User Button)
-    GPIOA->PUPDR |= (1 << 1); // Sets PUPDR[x][1] to 1 for PA0 (User Button)
+    GPIOA->PUPDR &= ~0x1; // Sets PUPDR[0][0] to 0 for PA0 (User Button)
+    GPIOA->PUPDR |= (1 << 1); // Sets PUPDR[0][1] to 1 for PA0 (User Button)
 
     // Set LEDs initial state: Orange ON, Red, Green, and Blue OFF
     GPIOC->ODR |= (1 << 9); //set PC9 high (Green LEDs)
     GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8)); //set PC6, PC7, and PC8 low (Red, Green, and Blue LEDs)
 }
+
 void HAL_RCC_GPIOC_CLK_ENABLE(void)
 {
     RCC->AHBENR |= (1 << 19); // Enable GPIOC clock bit (bit 19)
 }
+
+void HAL_RCC_GPIOA_CLK_ENABLE(void)
+{
+    RCC->AHBENR |= (1 << 17); // Enable GPIOA clock bit (bit 17)
+}
+
 /*
 void My_HAL_GPIO_DeInit(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 {
 }
 */
 
-/*
 GPIO_PinState My_HAL_GPIO_ReadPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
 {
-    return -1;
+    if (GPIOx->IDR & GPIO_Pin) {
+        return GPIO_PIN_SET; // IDR reg is 1 (pin is high)
+    } else {
+        return GPIO_PIN_RESET; // IDR reg is 0 (pin is low)
+    }
 }
-*/
 
 /*
 void My_HAL_GPIO_WritePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState)

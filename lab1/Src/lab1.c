@@ -20,6 +20,7 @@ int main(void)
   SystemClock_Config(); //config system clock
 
   HAL_RCC_GPIOC_CLK_ENABLE(); //enable GPIOC clock
+  HAL_RCC_GPIOA_CLK_ENABLE(); //enable GPIOA clock
   assert(((RCC->AHBENR >> 19) & 0x1) == 1); //assert GPIOC clock is enabled
   GPIO_InitTypeDef initStr = {GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_6 | GPIO_PIN_7, 
                               GPIO_MODE_OUTPUT_PP, 
@@ -34,16 +35,44 @@ int main(void)
   assert(((GPIOC->ODR >> 6) & 0x1) == 0x0); //assert Red LED is disabled
   assert(((GPIOC->ODR >> 7) & 0x1) == 0x0); //assert Blue LED is disabled
   assert(((GPIOC->ODR >> 8) & 0x1) == 0x0); //assert Orange LED is disabled
+
+  uint32_t debouncer = 0;
+  int cycle = 0;
+  int buttonEn = 1; // button starts enabled
   while (1)
   {
-    HAL_Delay(200);
-    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_9); 
-    HAL_Delay(200);
-    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_6);
-    HAL_Delay(200);
-    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7 | GPIO_PIN_8);
-    HAL_Delay(200);
-    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_7);
+    debouncer = (debouncer << 1);
+    //sets low bit to one if button is pressed
+    if (My_HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET) {
+      debouncer |= 0x1;
+    }
+      if (debouncer == 0x7FFFFFFF && buttonEn) //button has been pressed, execute one cycle
+    {
+      buttonEn = 0; // disable until release
+      switch (cycle)
+      {
+        case 0:
+          My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_9); // Green OFF & Red ON
+          break;
+        case 1:
+          My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_6); // Red OFF & Orange ON
+          break;
+        case 2:
+          My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7 | GPIO_PIN_8); // Orange OFF & Blue ON
+          break;
+        case 3:
+          My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9 | GPIO_PIN_7); // Blue OFF & Green ON
+          break;
+      }
+      if (cycle == 3) {cycle = 0;}
+      else {cycle++;}
+    }
+
+    // Button released, renable button
+    if (debouncer == 0x00000000)
+    {
+        buttonEn = 1;
+    }
   }
   return -1;
 }
