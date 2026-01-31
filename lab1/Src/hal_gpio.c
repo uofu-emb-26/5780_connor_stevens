@@ -48,9 +48,15 @@ void My_HAL_GPIOx_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
 
             //Setting OSPEEDR Reg
             GPIOx->OSPEEDR &= ~(3U << (pinNum * 2)); // Reset pin reg bits
-            GPIOx->OSPEEDR |= (GPIO_Init->Speed << (pinNum * 2)); //Set pin reg bits to passed mode
+            GPIOx->OSPEEDR |= (GPIO_Init->Speed << (pinNum * 2)); //Set pin reg bits to passed speed
 
-            //Setting 
+            int AFRreg;
+            //Setting Alternate Function
+            if (pinNum >= 8) { // Alternate High Register 
+                AFRreg = 1;
+            } else {AFRreg = 0;}
+            GPIOx->AFR[AFRreg] &= ~(8U << pinNum); // Clear 4 reg bits
+            GPIOx->AFR[AFRreg] |= (GPIO_Init->Alternate << pinNum);
         }
     }
 }
