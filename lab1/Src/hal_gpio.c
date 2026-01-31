@@ -3,6 +3,9 @@
 #include <stm32f0xx_hal_gpio.h>
 #include <hal_gpio.h>
 
+/**
+ * LED gpio init functio
+ */
 void My_HAL_GPIO_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
 {
     // Put PC6,7,8,9(LEDs Red, Orange, Green, Blue) in output mode (01)
@@ -28,6 +31,9 @@ void My_HAL_GPIO_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
     GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8)); //set PC6, PC7, and PC8 low (Red, Green, and Blue LEDs)
 }
 
+/**
+ * General GPIO Init function
+ */
 void My_HAL_GPIOx_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
 {
     for (uint32_t pinNum = 0; pinNum < 16; pinNum++) {
@@ -52,11 +58,11 @@ void My_HAL_GPIOx_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
 
             int AFRreg;
             //Setting Alternate Function
-            if (pinNum >= 8) { // Alternate High Register 
+            if (pinNum >= 8) { // Checking what reg (high or low) to modify
                 AFRreg = 1;
             } else {AFRreg = 0;}
             GPIOx->AFR[AFRreg] &= ~(8U << pinNum); // Clear 4 reg bits
-            GPIOx->AFR[AFRreg] |= (GPIO_Init->Alternate << pinNum);
+            GPIOx->AFR[AFRreg] |= (GPIO_Init->Alternate << pinNum); // Set alternate bits in proper reg
         }
     }
 }
