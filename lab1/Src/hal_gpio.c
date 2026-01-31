@@ -28,6 +28,33 @@ void My_HAL_GPIO_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
     GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8)); //set PC6, PC7, and PC8 low (Red, Green, and Blue LEDs)
 }
 
+void My_HAL_GPIOx_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
+{
+    for (uint32_t pinNum = 0; pinNum < 16; pinNum++) {
+        //checks if current pinNum is user passed Pin to modify
+        if (GPIO_Init->Pin & (1U << pinNum)) {
+
+            // Setting MODER Reg
+            GPIOx->MODER &= ~(3U << (pinNum * 2)); //clears pin mode
+            GPIOx->MODER |= (GPIO_Init->Mode << (pinNum * 2)); //sets pin to passed Mode
+
+            //Setting OTYPER Reg
+            if (GPIO_Init->Pull == GPIO_MODE_OUTPUT_PP) {
+                GPIOx->OTYPER &= ~(1U << pinNum); // Reset pin reg bit for push-pull
+            }
+            else if (GPIO_Init->Pull == GPIO_MODE_OUTPUT_OD) {
+                GPIOx->OTYPER |= (1U << pinNum); // Set pin reg bit for open-drain
+            }
+
+            //Setting OSPEEDR Reg
+            GPIOx->OSPEEDR &= ~(3U << (pinNum * 2)); // Reset pin reg bits
+            GPIOx->OSPEEDR |= (GPIO_Init->Speed << (pinNum * 2)); //Set pin reg bits to passed mode
+
+            //Setting 
+        }
+    }
+}
+
 void HAL_RCC_GPIOC_CLK_ENABLE(void)
 {
     RCC->AHBENR |= (1 << 19); // Enable GPIOC clock bit (bit 19)
@@ -53,11 +80,15 @@ GPIO_PinState My_HAL_GPIO_ReadPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
     }
 }
 
-/*
+
 void My_HAL_GPIO_WritePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState)
 {
+    if (PinState == GPIO_PIN_SET) {
+        GPIOx->BSRR |= GPIO_Pin; // Set the ODR reg for the passed pin
+    } else {
+        GPIOx->BSRR &= ~GPIO_Pin; // Reset the ODR reg for the passed pin
+    }
 }
-*/
 
 
 void My_HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
