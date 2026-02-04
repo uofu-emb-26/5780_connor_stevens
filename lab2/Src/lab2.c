@@ -3,6 +3,7 @@
 #include "stm32f0xx_hal_gpio.h"
 #include <assert.h>
 #include "hal_gpio.h"
+#include "core_cm0.h"
 
 void SystemClock_Config(void);
 
@@ -62,12 +63,22 @@ int main(void)
   assert((EXTI->RTSR & 0x1) == 0x1); //assert EXTI0 rising trigger is enabled (1)
   assert((SYSCFG->EXTICR[0] & 0xF) == 0x0); //assert EXTI0 multiplexer is set to PA0
 
+  NVIC_EnableIRQ(EXTI0_1_IRQn);
+  NVIC_SetPriority(EXTI0_1_IRQn, 1);
+
   while (1)
   {
     HAL_Delay(600);
     My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
   }
   return -1;
+}
+
+void EXTI0_1_IRQHandler(void) 
+{
+  My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_9); // toggle green and orange LED
+  NVIC_ClearPendingIRQ(EXTI0_1_IRQn);
+  EXTI->PR |= 0x0;
 }
 
 /**
