@@ -112,8 +112,9 @@ void My_HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
     GPIOx->ODR ^= GPIO_Pin; // Toggle the output data register for the passed pin(s)
 }
 
-void EXTI0_Unmask(EXTI_TypeDef *EXTI0) {
+void EXTI_Setup(EXTI_TypeDef *EXTI0, SYSCFG_TypeDef *EXTICR) {
     EXTI0->IMR |= 0x1; //unmask interupt generation for line0
-    EXTI0->RTSR |= 0x1; //enabel rising trigger detection for line0
+    EXTI0->RTSR |= 0x1; //enable rising trigger detection for line0
+    SYSCFG->EXTICR[0] |= ~(0xF); //set multiplexer of EXTI0 to PA0
 }
 

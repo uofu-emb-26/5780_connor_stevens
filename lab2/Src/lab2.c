@@ -18,6 +18,8 @@ int main(void)
   SystemClock_Config();
   HAL_RCC_GPIOC_CLK_ENABLE(); //enable gpioc clock
   HAL_RCC_GPIOA_CLK_ENABLE(); //enable gpioa clk
+  RCC->APB2ENR |= 0x1; //enables SYSCFG clk
+
   GPIO_InitTypeDef iniStr = {GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_7 | GPIO_PIN_6,
                             GPIO_MODE_OUTPUT_PP,
                             GPIO_NOPULL,
@@ -28,6 +30,7 @@ int main(void)
                               GPIO_SPEED_FREQ_LOW};
   My_HAL_GPIOx_Init(GPIOC, &iniStr);
   My_HAL_GPIOx_Init(GPIOA, &iniPA0Str);
+ 
   GPIOC->ODR |= (1 << 9); //set PC9 high (Green LEDs)
   GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8)); //set PC6, PC7, and PC8 low (Red, Green, and Blue LEDs)
 
@@ -51,9 +54,13 @@ int main(void)
   assert(((GPIOC->ODR >> 7) & 0x1) == 0x0); //assert Blue LED is disabled
   assert(((GPIOC->ODR >> 8) & 0x1) == 0x0); //assert Orange LED is disabled
 
-  assert((EXTI->IMR & 0x1) == 0x0); //assert EXTI line 0 interupt is masked (0)
-  EXTI0_Unmask(EXTI);
+  assert((EXTI->IMR & 0x1) == 0x0); //assert EXTI0 interupt is masked (0)
+  assert((EXTI->RTSR & 0x1) == 0x0); //assert EXTI0 rising trigger is not-enabled (0)
+  assert((SYSCFG->EXTICR[0] & 0xF) == 0x0); //assert EXTI0 multiplexer is set to PA0
+  EXTI_Setup(EXTI, SYSCFG);
   assert((EXTI->IMR & 0x1) == 0x1); //assert EXTI line 0 interupt is unmasked (1)
+  assert((EXTI->RTSR & 0x1) == 0x1); //assert EXTI0 rising trigger is enabled (1)
+  assert((SYSCFG->EXTICR[0] & 0xF) == 0x0); //assert EXTI0 multiplexer is set to PA0
 
   while (1)
   {
