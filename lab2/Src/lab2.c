@@ -41,8 +41,10 @@ int main(void)
   assert(((GPIOC->OTYPER >> 6) & 0x1) == 0x0); //assert PC6 (Blue LED) is in push pull mode(0)
   assert(((GPIOC->OTYPER >> 7) & 0x1) == 0x0); //assert PC7 (Red LED) is in push pull mode(0)
   assert(((GPIOC->OTYPER >> 8) & 0x1) == 0x0);//assert PC8 (Orange LED) is in push pull mode(0)
+//  assert((GPIOA->OTYPER & 0x1) == 0x0); //assert PA0 (User Button) is in push pull mode (0)
 
-  assert((GPIOA->PUPDR & 0x3) == 0x2); //assert PA0 (User Button) is in Pull Down (10)
+  assert(((GPIOC->PUPDR >> (8*2)) & 0x3) == 0x0); //assert PC8 (Orange LED) is in no pull (00)
+  assert((GPIOA->PUPDR & 0x3) == 0x2); //assert PA0 (User Button) is in pull-down (10)
 
   assert(((GPIOC->ODR >> 9) & 0x1) == 0x1); //assert Green LED is enabled
   assert(((GPIOC->ODR >> 6) & 0x1) == 0x0); //assert Red LED is disabled

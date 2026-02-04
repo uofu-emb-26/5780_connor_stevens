@@ -45,12 +45,16 @@ void My_HAL_GPIOx_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
             GPIOx->MODER |= (GPIO_Init->Mode << (pinNum * 2)); //sets pin to passed Mode
 
             //Setting OTYPER Reg
-            if (GPIO_Init->Pull == GPIO_MODE_OUTPUT_PP) {
+            if ((GPIO_Init->Mode & GPIO_MODE_OUTPUT_PP) == GPIO_MODE_OUTPUT_PP) {
                 GPIOx->OTYPER &= ~(1U << pinNum); // Reset pin reg bit for push-pull
             }
-            else if (GPIO_Init->Pull == GPIO_MODE_OUTPUT_OD) {
-                GPIOx->OTYPER |= (1U << pinNum); // Set pin reg bit for open-drain
+            else {
+                GPIOx->OTYPER |= (1U << pinNum); //set pin reg bit for open-drain
             }
+
+            //setting PUPDR reg
+            GPIOx->PUPDR &= ~(3U << (pinNum * 2)); //clears pin mode
+            GPIOx->PUPDR |= (GPIO_Init->Pull << (pinNum * 2)); //sets pin to passed pull-up or pull-down mode
 
             //Setting OSPEEDR Reg
             GPIOx->OSPEEDR &= ~(3U << (pinNum * 2)); // Reset pin reg bits
