@@ -49,6 +49,10 @@ int main(void)
   assert(((GPIOC->ODR >> 7) & 0x1) == 0x0); //assert Blue LED is disabled
   assert(((GPIOC->ODR >> 8) & 0x1) == 0x0); //assert Orange LED is disabled
 
+  assert((EXTI->IMR & 0x1) == 0x0); //assert EXTI line 0 interupt is masked (0)
+  EXTI0_Unmask(EXTI);
+  assert((EXTI->IMR & 0x1) == 0x1); //assert EXTI line 0 interupt is unmasked (1)
+
   while (1)
   {
     HAL_Delay(600);

@@ -12,3 +12,4 @@ void My_HAL_GPIO_WritePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, GPIO_PinState 
 void My_HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
 void HAL_RCC_GPIOC_CLK_ENABLE(void);
 void HAL_RCC_GPIOA_CLK_ENABLE(void);
+void EXTI0_Unmask(EXTI_TypeDef *EXTI0);
