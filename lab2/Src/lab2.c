@@ -1,7 +1,9 @@
 #include "main.h"
+#include "stm32f072xb.h"
 #include "stm32f0xx_hal.h"
 #include "stm32f0xx_hal_gpio.h"
 #include <assert.h>
+#include <stdio.h>
 #include "hal_gpio.h"
 #include "core_cm0.h"
 
@@ -64,7 +66,8 @@ int main(void)
   assert((SYSCFG->EXTICR[0] & 0xF) == 0x0); //assert EXTI0 multiplexer is set to PA0
 
   NVIC_EnableIRQ(EXTI0_1_IRQn);
-  NVIC_SetPriority(EXTI0_1_IRQn, 1);
+  NVIC_SetPriority(EXTI0_1_IRQn, 3);
+  NVIC_SetPriority(SysTick_IRQn, 2);
 
   while (1)
   {
@@ -77,8 +80,10 @@ int main(void)
 void EXTI0_1_IRQHandler(void) 
 {
   My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_9); // toggle green and orange LED
+  for (volatile int delay = 0; delay < 1500000; delay++);
+  My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_9); // toggle green and orange LED
   NVIC_ClearPendingIRQ(EXTI0_1_IRQn);
-  EXTI->PR |= 0x0;
+  EXTI->PR = 0x1;
 }
 
 /**
