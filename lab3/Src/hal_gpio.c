@@ -98,3 +98,17 @@ void Timer2_Setup(TIM_TypeDef *TIMx) {
     TIMx->CR1 |= 0x1; //enable time clk
 }
 
+void TIM3_Setup(TIM_TypeDef *TIMx) {
+    TIMx->PSC = 0x63; // set PSC to 99 (make clk 80KHz)
+    TIMx->ARR = 0x64; // set ARR to 100
+
+    TIMx->CCMR1 &= ~(0x3 << 8 | 0x3); //set CC2S and CC1S to 00 (output mode)
+    TIMx->CCMR1 |= (0x7 << 4); //set OC1M to 111 (PWM Mode 2)
+    TIMx->CCMR1 &= ~(0x6 << 12); // set OC2M to 110 (PWM Mode 2)
+    TIMx->CCMR1 |= (1 << 3 | 1 << 11); // set OCPE to 1 for both channels (bits 3/11)
+
+    TIMx->CCER |= (0x1 | 1 << 4); // set bits 0/4 to 1 (enable output for channels 1 and 2)
+    TIMx->CCR1 = 0x14;
+    TIMx->CCR2 = 0x14;
+}
+
