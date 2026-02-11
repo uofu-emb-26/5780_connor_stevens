@@ -1,5 +1,11 @@
 #include "main.h"
+#include "stm32f072xb.h"
 #include "stm32f0xx_hal.h"
+#include "stm32f0xx_hal_gpio.h"
+#include <assert.h>
+#include <stdio.h>
+#include "hal_gpio.h"
+#include "core_cm0.h"
 
 void SystemClock_Config(void);
 
@@ -13,12 +19,36 @@ int main(void)
   HAL_Init();
   /* Configure the system clock */
   SystemClock_Config();
+  HAL_RCC_GPIOC_CLK_ENABLE(); //enable gpioc clock
+  RCC_TIM23_CLK_Enable(); //enable TIM2 and TIM3 clk
+
+  Timer2_Setup(TIM2); //setup clock to interupt 4 times a second
+
+  // Setup LEDs Green and Orange 
+  GPIO_InitTypeDef iniStr = {GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_7,
+                          GPIO_MODE_OUTPUT_PP,
+                          GPIO_NOPULL,
+                          GPIO_SPEED_FREQ_LOW};
+  My_HAL_GPIOx_Init(GPIOC, &iniStr);
+
+  NVIC_EnableIRQ(TIM2_IRQn);
+  NVIC_SetPriority(TIM2_IRQn, 1);
+
+  GPIOC->ODR |= (1 << 9); //set PC9 high (Green LED)
+  GPIOC->ODR &= ~(1 << 8); //set PC8 low (Orange LED)
 
   while (1)
   {
- 
+    HAL_Delay(300);
+    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
   }
   return -1;
+}
+
+void TIM2_IRQHandler(void) 
+{
+  My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_9); // toggle green and orange LED
+  TIM2->SR &= ~(0x1);
 }
 
 /**
