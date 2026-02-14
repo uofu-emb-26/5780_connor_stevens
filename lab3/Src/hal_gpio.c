@@ -17,12 +17,11 @@ void My_HAL_GPIOx_Init(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_Init)
             GPIOx->MODER &= ~(3U << (pinNum * 2)); //clears pin mode
             GPIOx->MODER |= (GPIO_Init->Mode << (pinNum * 2)); //sets pin to passed Mode
 
-            //Setting OTYPER Reg
-            if ((GPIO_Init->Mode & GPIO_MODE_OUTPUT_PP) == GPIO_MODE_OUTPUT_PP) {
-                GPIOx->OTYPER &= ~(1U << pinNum); // Reset pin reg bit for push-pull
-            }
-            else {
-                GPIOx->OTYPER |= (1U << pinNum); //set pin reg bit for open-drain
+           //Setting OTYPER Reg (check for both regular output and alternate function push-pull)
+            if ((GPIO_Init->Mode == GPIO_MODE_OUTPUT_PP) || (GPIO_Init->Mode == GPIO_MODE_AF_PP)) {
+                GPIOx->OTYPER &= ~(1U << pinNum); // Push-pull
+            } else {
+                GPIOx->OTYPER |= (1U << pinNum); // Open-drain
             }
 
             //setting PUPDR reg
@@ -101,20 +100,22 @@ void TIM2_Setup(TIM_TypeDef *TIMx) {
 }
 
 void TIM3_Setup(TIM_TypeDef *TIMx) {
-    TIMx->PSC = 0x63; // set PSC to 99 (make clk 80KHz)
-    TIMx->ARR = 0x64; // set ARR to 100
-
-    TIMx->CCMR1 &= ~(0x3 << 8 | 0x3); //set CC2S and CC1S to 00 (output mode)
-    TIMx->CCMR1 |= (0x7 << 4); //set OC1M to 111 (PWM Mode 1)
-
-    TIMx->CCMR1 &= ~(0x7 << 12); // clear OC2M to 000
-    TIMx->CCMR1 |= (0x6 << 12); // set OC2M to 110 (PWM Mode 2)
-    TIMx->CCMR1 |= (1 << 3 | 1 << 11); // set OCPE to 1 for both channels (bits 3/11)
-
-    TIMx->CCER |= (0x1 | 1 << 4); // set bits 0/4 to 1 (enable output for channels 1 and 2)
-    TIMx->CCR1 = 0x14; //set to 20% of ARR (0x14 = 20)
-    TIMx->CCR2 = 0x14;
-
-    TIMx->CR1 |= 0x1; //enable time clk
+    TIMx->PSC = 0x63;
+    TIMx->ARR = 0x64;
+    
+    // Clear and set channel modes properly
+    TIMx->CCMR1 &= ~(0x3 | (0x3 << 8));     // Clear CC1S and CC2S (output mode)
+    TIMx->CCMR1 &= ~(0x7 << 4);             // Clear OC1M
+    TIMx->CCMR1 |= (0x7 << 4);              // Set OC1M to 111 (PWM Mode 2)
+    TIMx->CCMR1 &= ~(0x7 << 12);            // Clear OC2M
+    TIMx->CCMR1 |= (0x6 << 12);             // Set OC2M to 110 (PWM Mode 1)
+    TIMx->CCMR1 |= (1 << 3) | (1 << 11);    // Enable preload for both channels
+    
+    TIMx->CCER |= (0x1) | (1 << 4);         // Enable output for channels 1 and 2
+    
+    TIMx->CCR1 = 10;  // 20% duty cycle
+    TIMx->CCR2 = 90;  // 20% duty cycle
+    
+    TIMx->CR1 |= 0x1;         // Enable timer
 }
 
