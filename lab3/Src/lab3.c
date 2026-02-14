@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include "hal_gpio.h"
 #include "core_cm0.h"
+#include "stm32f0xx_hal_gpio_ex.h"
 
 void SystemClock_Config(void);
 
@@ -22,14 +23,44 @@ int main(void)
   HAL_RCC_GPIOC_CLK_ENABLE(); //enable gpioc clock
   RCC_TIM23_CLK_Enable(); //enable TIM2 and TIM3 clk
 
-  Timer2_Setup(TIM2); //setup clock to interupt 4 times a second
+  TIM2_Setup(TIM2); //setup clock to interupt 4 times a second
+  TIM3_Setup(TIM3);
+
+  // Check CCMR1: CC1S = 00, CC2S = 00 (bits 0-1 and 8-9)
+assert((TIM3->CCMR1 & 0x3) == 0);         // CC1S
+assert((TIM3->CCMR1 & (0x3 << 8)) == 0);  // CC2S
+
+// Check CCMR1: OC1M = 111 (bits 4-6), OC2M = 110 (bits 12-14)
+assert((TIM3->CCMR1 & (0x7 << 4)) == (0x7 << 4));     // OC1M = 111
+assert((TIM3->CCMR1 & (0x7 << 12)) == (0x6 << 12));   // OC2M = 110
+
+// Check CCMR1: OC1PE = 1 (bit 3), OC2PE = 1 (bit 11)
+assert((TIM3->CCMR1 & (1 << 3)) != 0);   // OC1PE
+assert((TIM3->CCMR1 & (1 << 11)) != 0);  // OC2PE
+
+// Check CCER: CC1E = 1 (bit 0), CC2E = 1 (bit 4)
+assert((TIM3->CCER & 0x1) != 0);         // CC1E
+assert((TIM3->CCER & (1 << 4)) != 0);    // CC2E
 
   // Setup LEDs Green and Orange 
-  GPIO_InitTypeDef iniStr = {GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_7,
+  GPIO_InitTypeDef iniStr = {GPIO_PIN_8 | GPIO_PIN_9,
                           GPIO_MODE_OUTPUT_PP,
                           GPIO_NOPULL,
                           GPIO_SPEED_FREQ_LOW};
+  // Setup LEDs Green and Orange 
+  GPIO_InitTypeDef iniStr2 = {GPIO_PIN_6 | GPIO_PIN_7,
+                          GPIO_MODE_AF_PP,
+                          GPIO_NOPULL,
+                          GPIO_SPEED_FREQ_LOW,
+                          GPIO_AF0_TIM3};
   My_HAL_GPIOx_Init(GPIOC, &iniStr);
+  My_HAL_GPIOx_Init(GPIOC, &iniStr2);
+
+  assert(((GPIOC->MODER >> (6*2)) & 0x3) == 0x2); //assert PC6 (Blue LED) is in alternate mode (10)
+  assert(((GPIOC->MODER >> (7*2)) & 0x3) == 0x2); //assert PC7 (Red LED) is in alternate mode (10)
+
+  assert(((GPIOC->AFR[0] >> 28) & 0xF) == 0x0); //assert PC7 is in AF0 mode
+  assert(((GPIOC->AFR[0] >> 24) & 0xF) == 0x0); //assert PC6 is in AF0 mode
 
   NVIC_EnableIRQ(TIM2_IRQn);
   NVIC_SetPriority(TIM2_IRQn, 1);
@@ -39,8 +70,6 @@ int main(void)
 
   while (1)
   {
-    HAL_Delay(300);
-    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
   }
   return -1;
 }

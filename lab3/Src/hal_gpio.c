@@ -7,7 +7,7 @@
 /**
  * General GPIO Init function
  */
-void My_HAL_GPIOx_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
+void My_HAL_GPIOx_Init(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_Init)
 {
     for (uint32_t pinNum = 0; pinNum < 16; pinNum++) {
         //checks if current pinNum is user passed Pin to modify
@@ -33,13 +33,15 @@ void My_HAL_GPIOx_Init(GPIO_TypeDef  *GPIOx, GPIO_InitTypeDef *GPIO_Init)
             GPIOx->OSPEEDR &= ~(3U << (pinNum * 2)); // Reset pin reg bits
             GPIOx->OSPEEDR |= (GPIO_Init->Speed << (pinNum * 2)); //Set pin reg bits to passed speed
 
-            int AFRreg;
+            uint32_t AFRreg;
+            uint32_t AFRPin = pinNum;
             //Setting Alternate Function
             if (pinNum >= 8) { // Checking what reg (high or low) to modify
                 AFRreg = 1;
+                AFRPin -= 8;
             } else {AFRreg = 0;}
-            GPIOx->AFR[AFRreg] &= ~(8U << pinNum); // Clear 4 reg bits
-            GPIOx->AFR[AFRreg] |= (GPIO_Init->Alternate << pinNum); // Set alternate bits in proper reg
+            GPIOx->AFR[AFRreg] &= ~(0xF << (AFRPin * 4)); // Clear 4 reg bits
+            GPIOx->AFR[AFRreg] |= (GPIO_Init->Alternate << (AFRPin * 4)); // Set alternate bits in proper reg
         }
     }
 }
@@ -91,7 +93,7 @@ void My_HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
     GPIOx->ODR ^= GPIO_Pin; // Toggle the output data register for the passed pin(s)
 }
 
-void Timer2_Setup(TIM_TypeDef *TIMx) {
+void TIM2_Setup(TIM_TypeDef *TIMx) {
     TIMx->PSC = 0x1F3F; // set PSC to 7,999 (make clk 1KHz)
     TIMx->ARR = 0xFA; // set ARR to 250
     TIMx->DIER |= 0x1; //enable UEV interrupt
@@ -103,12 +105,16 @@ void TIM3_Setup(TIM_TypeDef *TIMx) {
     TIMx->ARR = 0x64; // set ARR to 100
 
     TIMx->CCMR1 &= ~(0x3 << 8 | 0x3); //set CC2S and CC1S to 00 (output mode)
-    TIMx->CCMR1 |= (0x7 << 4); //set OC1M to 111 (PWM Mode 2)
-    TIMx->CCMR1 &= ~(0x6 << 12); // set OC2M to 110 (PWM Mode 2)
+    TIMx->CCMR1 |= (0x7 << 4); //set OC1M to 111 (PWM Mode 1)
+
+    TIMx->CCMR1 &= ~(0x7 << 12); // clear OC2M to 000
+    TIMx->CCMR1 |= (0x6 << 12); // set OC2M to 110 (PWM Mode 2)
     TIMx->CCMR1 |= (1 << 3 | 1 << 11); // set OCPE to 1 for both channels (bits 3/11)
 
     TIMx->CCER |= (0x1 | 1 << 4); // set bits 0/4 to 1 (enable output for channels 1 and 2)
-    TIMx->CCR1 = 0x14;
+    TIMx->CCR1 = 0x14; //set to 20% of ARR (0x14 = 20)
     TIMx->CCR2 = 0x14;
+
+    TIMx->CR1 |= 0x1; //enable time clk
 }
 
