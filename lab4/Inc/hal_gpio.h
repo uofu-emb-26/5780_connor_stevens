@@ -14,5 +14,6 @@ void HAL_RCC_GPIOB_CLK_ENABLE(void);
 void HAL_RCC_GPIOA_CLK_ENABLE(void);
 void RCC_TIM23_CLK_Enable(void);
 void RCC_USART3_CLK_ENABLE(void);
+void EXTI_Setup(EXTI_TypeDef *EXTI0, SYSCFG_TypeDef *EXTICR);
 void TIM2_Setup(TIM_TypeDef *TIMx);
 void TIM3_Setup(TIM_TypeDef *TIMx);

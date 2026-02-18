@@ -71,6 +71,12 @@ void RCC_USART3_CLK_ENABLE(void)
     RCC->APB1ENR |= (1 << 18); // Sets bit 18 (USART3) to 1
 }
 
+void EXTI_Setup(EXTI_TypeDef *EXTI0, SYSCFG_TypeDef *EXTICR) {
+    EXTI0->IMR |= 0x1; //unmask interupt generation for line0
+    EXTI0->RTSR |= 0x1; //enable rising trigger detection for line0
+    SYSCFG->EXTICR[0] |= ~(0xF); //set multiplexer of EXTI0 to PA0
+}
+
 /*
 void My_HAL_GPIO_DeInit(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 {

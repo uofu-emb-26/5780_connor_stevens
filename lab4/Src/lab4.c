@@ -23,6 +23,8 @@ int main(void)
   SystemClock_Config();
   HAL_RCC_GPIOC_CLK_ENABLE();
   HAL_RCC_GPIOB_CLK_ENABLE();
+  HAL_RCC_GPIOA_CLK_ENABLE();
+  RCC->APB2ENR |= 0x1; //enables SYSCFG clk
   RCC_USART3_CLK_ENABLE();
 
   // Setup PB10 and PB11 into Tx and RX mode 
@@ -39,18 +41,54 @@ int main(void)
   My_HAL_GPIOx_Init(GPIOB, &iniStr);
   My_HAL_GPIOx_Init(GPIOC, &iniStr2);
 
+  USART3->CR1 &= ~(1 << 15); //Set OVER8 = 0
+
+  uint32_t clk = HAL_RCC_GetHCLKFreq();
+  uint32_t baudRate = 115200;
+  USART3->BRR = clk / baudRate; // Set Baud rate to ~115,200 (divide 8MHz by 69)
+
+  USART3->CR1 |= (0x3 << 2); // Set bits 2 & 3 (TX and RX enable) to 1 
+  USART3->CR1 |= 0x1; //enable USART3
+
   assert(((GPIOB->MODER >> (10*2)) & 0x3) == 0x2); //assert PB10 is in alternate mode (10)
   assert(((GPIOB->MODER >> (11*2)) & 0x3) == 0x2); //assert PB11 is in alternate mode (10)
 
   assert(((GPIOB->AFR[1] >> 8) & 0xF) == 0x4); //assert PC10 is in AF4 mode
   assert(((GPIOB->AFR[1] >> 12) & 0xF) == 0x4); //assert PC11 is in AF4 mode
 
+  assert(((USART3->CR1 >> 15) & 0x1) == 0x0); // check USART3 OVER8 = 0
+  assert(((USART3->CR1 >> 2) & 0x3) == 0x3); // check TX and RX are enabled
+  assert(((USART3->CR1) & 0x1) == 0x1); // check USART3 is enabled
+  assert((USART3->BRR) == 0x45); // check USART3 Baud rate divdes by 69
+
+  EXTI_Setup(EXTI, SYSCFG); // Setup PA0 (User Button) for interupts
+  NVIC_EnableIRQ(EXTI0_1_IRQn);
+  NVIC_SetPriority(EXTI0_1_IRQn, 1);
+  
   while (1)
   {
-    HAL_Delay(300);
-    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
   }
   return -1;
+}
+
+void sendChar(char c) {
+  while(((USART3->ISR >> 7) & 0x1) == 0x0) {} //wait for tx reg to be empty
+  USART3->TDR = c;
+}
+
+void sendString(const char *str) {
+  while(*str != 0) {
+    sendChar(*str);
+    str++;
+  }
+}
+
+void EXTI0_1_IRQHandler() {
+  char string[] = "Hello World";
+  sendString(string);
+  My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
+  NVIC_ClearPendingIRQ(EXTI0_1_IRQn);
+  EXTI->PR = 0x1;
 }
 
 /**
