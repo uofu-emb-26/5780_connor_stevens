@@ -9,7 +9,12 @@
 #include "stm32f0xx_hal_gpio_ex.h"
 #include "stm32f0xx_hal_rcc.h"
 
+void sendChar(char c);
+void sendString(const char *str);
 void SystemClock_Config(void);
+
+volatile uint8_t receiveReg;
+volatile uint8_t newData = 0;
 
 /**
   * @brief  The application entry point.
@@ -33,22 +38,14 @@ int main(void)
                           GPIO_NOPULL,
                           GPIO_SPEED_FREQ_LOW,
                           GPIO_AF4_USART3};
-  // Setup LEDs Green and Orange 
-  GPIO_InitTypeDef iniStr2 = {GPIO_PIN_8,
+  // Setup ALL LEDs
+  GPIO_InitTypeDef iniStr2 = {GPIO_PIN_8 | GPIO_PIN_7 |GPIO_PIN_6 | GPIO_PIN_9,
                           GPIO_MODE_OUTPUT_PP,
                           GPIO_NOPULL,
                           GPIO_SPEED_FREQ_LOW};
   My_HAL_GPIOx_Init(GPIOB, &iniStr);
   My_HAL_GPIOx_Init(GPIOC, &iniStr2);
-
-  USART3->CR1 &= ~(1 << 15); //Set OVER8 = 0
-
-  uint32_t clk = HAL_RCC_GetHCLKFreq();
-  uint32_t baudRate = 115200;
-  USART3->BRR = clk / baudRate; // Set Baud rate to ~115,200 (divide 8MHz by 69)
-
-  USART3->CR1 |= (0x3 << 2); // Set bits 2 & 3 (TX and RX enable) to 1 
-  USART3->CR1 |= 0x1; //enable USART3
+  USART_Setup(USART3, 115200);
 
   assert(((GPIOB->MODER >> (10*2)) & 0x3) == 0x2); //assert PB10 is in alternate mode (10)
   assert(((GPIOB->MODER >> (11*2)) & 0x3) == 0x2); //assert PB11 is in alternate mode (10)
@@ -63,10 +60,68 @@ int main(void)
 
   EXTI_Setup(EXTI, SYSCFG); // Setup PA0 (User Button) for interupts
   NVIC_EnableIRQ(EXTI0_1_IRQn);
-  NVIC_SetPriority(EXTI0_1_IRQn, 1);
-  
+  NVIC_EnableIRQ(USART3_4_IRQn);
+  NVIC_SetPriority(EXTI0_1_IRQn,2);
+  NVIC_SetPriority(USART3_4_IRQn, 1);
+
+  char errorMsgLED[] = "ERROR: Key Pressed Not Routed To An LED\r\n ";
+  char errorMsgNum[] = "ERROR: Number Pressed Not Available Option\r\n ";
+  char CMDMsg[] = "Enter Command:\r\n";
+  uint16_t GPIO_PIN;
+  const char *selectedLED;
+  const char *selectedCMD;
   while (1)
   {
+    sendString(CMDMsg);
+    while(newData == 0) {} //wait for rx reg to be populated with LED color
+    uint8_t key = receiveReg;
+    newData = 0;
+    switch (key) {
+      case 'b': 
+        GPIO_PIN = GPIO_PIN_7;
+        selectedLED = "blue";
+        break;
+      case 'o': 
+        GPIO_PIN = GPIO_PIN_8;
+        selectedLED = "orange";
+        break;
+      case 'g': 
+        GPIO_PIN = GPIO_PIN_9;
+        selectedLED = "green";
+        break;
+      case 'r': 
+        GPIO_PIN = GPIO_PIN_6;
+        selectedLED = "red";
+        break;
+      default: 
+        sendString(errorMsgLED);
+        continue;
+    }
+  
+    while(newData == 0) {} //wait for rx reg to be populated with num command
+    uint8_t num = receiveReg;
+    newData = 0;
+    switch (num) {
+      case '0': 
+        GPIOC->ODR &= ~GPIO_PIN;
+        selectedCMD = "turned off";
+        break;
+      case '1': 
+        GPIOC->ODR |= GPIO_PIN;
+        selectedCMD = "turned on";
+        break;
+      case '2': 
+        My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN);
+        selectedCMD = "toggled";
+        break;
+      default: 
+        sendString(errorMsgNum);
+        continue;
+    }
+
+    char buffer[64];
+    sprintf(buffer, "Successfully %s %s LED\r\n", selectedCMD, selectedLED);
+    sendString(buffer);
   }
   return -1;
 }
@@ -84,11 +139,16 @@ void sendString(const char *str) {
 }
 
 void EXTI0_1_IRQHandler() {
-  char string[] = "Hello World";
+  char string[] = "User Button Pressed\r\n ";
   sendString(string);
   My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
   NVIC_ClearPendingIRQ(EXTI0_1_IRQn);
   EXTI->PR = 0x1;
+}
+
+void USART3_4_IRQHandler() {
+  receiveReg = USART3->RDR;
+  newData = 1;
 }
 
 /**

@@ -77,6 +77,17 @@ void EXTI_Setup(EXTI_TypeDef *EXTI0, SYSCFG_TypeDef *EXTICR) {
     SYSCFG->EXTICR[0] |= ~(0xF); //set multiplexer of EXTI0 to PA0
 }
 
+void USART_Setup(USART_TypeDef *USARTx, uint32_t baudRate) {
+  USARTx->CR1 &= ~(1 << 15); //Set OVER8 = 0
+  USARTx->CR1 |= (0x3 << 2); // Set bits 2 & 3 (TX and RX enable)
+  USARTx->CR1 |= (1 << 5); // set bit 5 (receive register not empty interupt)
+
+  uint32_t clk = HAL_RCC_GetHCLKFreq();
+  USARTx->BRR = clk / baudRate; // Set Baud rate to ~115,200 (divide 8MHz by 69)
+
+  USARTx->CR1 |= 0x1; //enable USART3
+}
+
 /*
 void My_HAL_GPIO_DeInit(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 {
