@@ -66,6 +66,11 @@ void RCC_TIM23_CLK_Enable(void)
     RCC->APB1ENR |= (1 << 1); // Sets bits 1:0 (TIM2 and TIM3)
 }
 
+void RCC_USART3_CLK_ENABLE(void)
+{
+    RCC->APB1ENR |= (1 << 18); // Sets bit 18 (USART3) to 1
+}
+
 /*
 void My_HAL_GPIO_DeInit(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 {

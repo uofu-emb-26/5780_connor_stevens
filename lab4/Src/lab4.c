@@ -1,5 +1,13 @@
 #include "main.h"
+#include "stm32f072xb.h"
 #include "stm32f0xx_hal.h"
+#include "stm32f0xx_hal_gpio.h"
+#include <assert.h>
+#include <stdio.h>
+#include "hal_gpio.h"
+#include "core_cm0.h"
+#include "stm32f0xx_hal_gpio_ex.h"
+#include "stm32f0xx_hal_rcc.h"
 
 void SystemClock_Config(void);
 
@@ -13,10 +21,34 @@ int main(void)
   HAL_Init();
   /* Configure the system clock */
   SystemClock_Config();
+  HAL_RCC_GPIOC_CLK_ENABLE();
+  HAL_RCC_GPIOB_CLK_ENABLE();
+  RCC_USART3_CLK_ENABLE();
+
+  // Setup PB10 and PB11 into Tx and RX mode 
+  GPIO_InitTypeDef iniStr = {GPIO_PIN_10 | GPIO_PIN_11,
+                          GPIO_MODE_AF_PP,
+                          GPIO_NOPULL,
+                          GPIO_SPEED_FREQ_LOW,
+                          GPIO_AF4_USART3};
+  // Setup LEDs Green and Orange 
+  GPIO_InitTypeDef iniStr2 = {GPIO_PIN_8,
+                          GPIO_MODE_OUTPUT_PP,
+                          GPIO_NOPULL,
+                          GPIO_SPEED_FREQ_LOW};
+  My_HAL_GPIOx_Init(GPIOB, &iniStr);
+  My_HAL_GPIOx_Init(GPIOC, &iniStr2);
+
+  assert(((GPIOB->MODER >> (10*2)) & 0x3) == 0x2); //assert PB10 is in alternate mode (10)
+  assert(((GPIOB->MODER >> (11*2)) & 0x3) == 0x2); //assert PB11 is in alternate mode (10)
+
+  assert(((GPIOB->AFR[1] >> 8) & 0xF) == 0x4); //assert PC10 is in AF4 mode
+  assert(((GPIOB->AFR[1] >> 12) & 0xF) == 0x4); //assert PC11 is in AF4 mode
 
   while (1)
   {
- 
+    HAL_Delay(300);
+    My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
   }
   return -1;
 }
