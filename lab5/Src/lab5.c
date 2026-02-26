@@ -14,6 +14,7 @@ volatile uint8_t receiveReg;
 volatile uint8_t newData = 0;
 void sendChar(char c);
 void sendString(const char *str);
+char* int_to_str(int num);
 
 typedef enum {
     I2C_PASS = 0,
@@ -24,6 +25,10 @@ I2C_Status writeOp(uint8_t Byte);
 I2C_Status readOp(uint8_t *Byte);
 void NACKF_Error(void);
 
+char enterW[] = "Entering WriteOp \r\n";
+char enterR[] = "Entering ReadOp \r\n";
+char pastWhileW[] = "Exited WriteOp While Loop \r\n";
+char pastWhileR[] = "Exited ReadOp While Loop \r\n";
 
 
 /**
@@ -47,25 +52,35 @@ int main(void)
                             GPIO_NOPULL,
                           GPIO_SPEED_FREQ_LOW,
                       GPIO_AF1_I2C2};
-
+  // Setup USART pins
   GPIO_InitTypeDef iniStr3 = {GPIO_PIN_4 | GPIO_PIN_5,
                         GPIO_MODE_AF_PP,
                         GPIO_NOPULL,
                         GPIO_SPEED_FREQ_LOW,
                         GPIO_AF1_USART3};
   //Setup ALL LEDs and PC0
-  GPIO_InitTypeDef iniStr2 = {GPIO_PIN_8 | GPIO_PIN_7 |GPIO_PIN_6 | GPIO_PIN_9 |GPIO_PIN_0,
+  GPIO_InitTypeDef iniStr2 = {GPIO_PIN_8 | GPIO_PIN_7 |GPIO_PIN_6 | GPIO_PIN_9 | GPIO_PIN_0,
                           GPIO_MODE_OUTPUT_PP,
                           GPIO_NOPULL,
                           GPIO_SPEED_FREQ_LOW};
+  GPIO_InitTypeDef iniStr4 = {
+                            GPIO_PIN_15,
+                            GPIO_MODE_OUTPUT_OD,  // Open-drain
+                            GPIO_NOPULL,
+                            GPIO_SPEED_FREQ_LOW};
+
+  My_HAL_GPIOx_Init(GPIOB, &iniStr4);
+  GPIOB->ODR |= (1 << 15); // Set high so it's not pulling the line down
 
   My_HAL_GPIOx_Init(GPIOB, &iniStr);
   iniStr.Pin = GPIO_PIN_13; // set to PB13
   iniStr.Alternate = GPIO_AF5_I2C2; //set AF to 5
   My_HAL_GPIOx_Init(GPIOB, &iniStr);
+
   My_HAL_GPIOx_Init(GPIOC, &iniStr2);
   iniStr2.Pin = GPIO_PIN_14; // Set inistr3 to only pin 14 for PB14 init
   My_HAL_GPIOx_Init(GPIOB, &iniStr2);
+
   My_HAL_GPIOx_Init(GPIOC, &iniStr3); //set PC4 and PC5
   USART_Setup(USART3, 115200);
 
@@ -74,13 +89,13 @@ int main(void)
 
   assert(((GPIOB->MODER >> (11*2)) & 0x3) == 0x2); //assert PB11 is in alternate mode (10)
   assert(((GPIOB->MODER >> (13*2)) & 0x3) == 0x2); //assert PB13 is in alternate mode (10)
-  assert(((GPIOB->MODER >> (14*2)) & 0x3) == 0x1); //assert PB13 is in output mode (01)
+  assert(((GPIOB->MODER >> (14*2)) & 0x3) == 0x1); //assert PB14 is in output mode (01)
   assert(((GPIOC->MODER) & 0x3) == 0x1); //assert PC0 is in output mode (01)
 
   assert(((GPIOB->OTYPER >> 11) & 0x1) == 0x1); //assert PB11 open-drain mode(1)
   assert(((GPIOB->OTYPER >> 13) & 0x1) == 0x1); //assert PB13 open-drain mode(1)
-  assert(((GPIOB->OTYPER >> 14) & 0x1) == 0x0); //assert PB14 push-pull mode(1)
-  assert(((GPIOB->OTYPER >> 13) & 0x1) == 0x1); //assert PC0 push-pull mode(1) 
+  assert(((GPIOB->OTYPER >> 14) & 0x1) == 0x0); //assert PB14 push-pull mode(0)
+  assert(((GPIOC->OTYPER) & 0x1) == 0x0); //assert PC0 push-pull mode(0) 
 
   assert(((GPIOB->PUPDR >> (13*2)) & 0x3) == 0x0); //assert PB13 is in no pull (00)
   assert(((GPIOB->PUPDR >> (11*2)) & 0x3) == 0x0); //assert PB11 is in no pull (00)
@@ -91,27 +106,27 @@ int main(void)
   assert(((GPIOC->ODR) & 0x1) == 0x1); //assert PC0 is high
 
   I2Cx_Setup(I2C2);
-  I2C2->CR1 |= 0x1; // Enable peripheral
+  I2C2->CR1 |= 0x1;   // Re-enable
 
   Init_I2C_Transaction(I2C2, 0, 0x69, 0x1); //Initialize Write Transmit
+  sendString(int_to_str(((I2C2->ISR >> 15) & 0x1)));
   writeOp(0x0F); // Write WHO_AM_I Address
   Init_I2C_Transaction(I2C2, 1, 0x69, 0x1); //Initialize Read Transmit
 
   uint8_t receivedByte;
   if (readOp(&receivedByte) == I2C_PASS) { // Attempt to Read
-    if (receivedByte == 0xD4) {
-      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-    } else {HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);}
+    if (receivedByte == 0xD3) {
+      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9); // Toggle green LED, PASS
+    } else {HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);} // Toggel red LED, fail
   }
-  I2C2->CR2 |= (1 << 14); // Set STOP
+  I2C2->CR2 |= (1 << 14); // Set STOP, releases I2C bus 
 
   char msg[] = "Test USART\r\n";
-
   while (1)
   {
     HAL_Delay(1000);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
-    sendString(msg);
+ //   sendString(msg);
   }
   return -1;
 }
@@ -129,41 +144,78 @@ void sendString(const char *str) {
 }
 
 I2C_Status writeOp(uint8_t Byte) {
-  // Wait for TXIS or NACKF Flags set
-  while((((I2C2->ISR >> 1) & 0x1) == 0x0) || (((I2C2->ISR >> 4) & 0x1) == 0x0)) {} 
-  if (((I2C2->ISR >> 1) & 0x1) == 0x1) {
-    I2C2->TXDR = Byte;
-    while (((I2C2->ISR >> 6) & 0x1) == 0); // Wait for TC flag to be set
-    char buffer[64];
-    sprintf(buffer, "Successfully Sent Byte: %u\r\n", Byte);
-    sendString(buffer);
-    return I2C_PASS;
+  uint32_t numBytes = ((I2C2->CR2 >> 16) & 0xFF);
+  for (int i = 0; i < numBytes; i++) { // write each Byte
+     sendString(enterW);
+    // Wait for TXIS or NACKF Flags set
+    while((((I2C2->ISR >> 1) & 0x1) == 0x0) && (((I2C2->ISR >> 4) & 0x1) == 0x0)) {} 
+    sendString(pastWhileW);
+    if (((I2C2->ISR >> 1) & 0x1) == 0x1) {
+      I2C2->TXDR = Byte;
+      while (((I2C2->ISR >> 6) & 0x1) == 0) {} // Wait for TC flag to be set
+      char buffer[64];
+      sprintf(buffer, "Successfully Sent Byte: 0x%02X\r\n", Byte);
+      sendString(buffer);
+    }
+    else {
+      return I2C_NACK;
+    }
   }
-  else {
-    return I2C_NACK;
-  }
+  return I2C_PASS;
 }
 
 I2C_Status readOp(uint8_t *Byte) {
-  // Wait for RXNE or NACKF Flags set
-  while((((I2C2->ISR >> 2) & 0x1) == 0x0) || (((I2C2->ISR >> 4) & 0x1) == 0x0)) {} 
-  if (((I2C2->ISR >> 2) & 0x1) == 0x1) {
-    *Byte = I2C2->RXDR;
-    while (((I2C2->ISR >> 6) & 0x1) == 0); // Wait for TC flag to be set
-    char buffer[64];
-    sprintf(buffer, "Successfully Received Byte: %s\r\n", Byte);
-    sendString(buffer);
-    return I2C_PASS;
+  uint32_t numBytes = ((I2C2->CR2 >> 16) & 0xFF);
+  for (int i = 0; i < numBytes; i++) { // read each Byte
+    sendString(enterR);
+    // Wait for RXNE or NACKF Flags set
+    while((((I2C2->ISR >> 2) & 0x1) == 0x0) && (((I2C2->ISR >> 4) & 0x1) == 0x0)) {} 
+    sendString(pastWhileR);
+    if (((I2C2->ISR >> 2) & 0x1) == 0x1) {
+      *Byte = I2C2->RXDR;
+      while (((I2C2->ISR >> 6) & 0x1) == 0) {} // Wait for TC flag to be set
+      char buffer[64];
+      sprintf(buffer, "Successfully Received Byte: 0x%02X\r\n", *Byte);
+      sendString(buffer);
+    }
+    else {
+      return I2C_NACK;
+    }
   }
-  else {
-    return I2C_NACK;
-  }
+  return I2C_PASS;
 }
 
 void NACKF_Error(void) {
   char string[] = "NACKF flag set!\r\n";
   sendString(string);
-  I2C2->ICR |= (1<<4);
+  I2C2->ICR |= (1 << 4);
+}
+
+char* int_to_str(int num) {
+    // 'static' keeps this memory alive for the life of the program
+    // 12 bytes is enough for -2147483648 and a null terminator
+    static char buffer[12]; 
+    int i = 10;
+    int is_negative = 0;
+
+    buffer[11] = '\0'; // Null terminator at the very end
+
+    if (num == 0) {
+        buffer[i--] = '0';
+    } else {
+        if (num < 0) {
+            is_negative = 1;
+            num = -num;
+        }
+        while (num > 0 && i > 0) {
+            buffer[i--] = (num % 10) + '0';
+            num /= 10;
+        }
+        if (is_negative) buffer[i--] = '-';
+    }
+
+    // Return the pointer to where the string actually starts
+    return &buffer[i + 1];
 }
 
 void USART3_4_IRQHandler() {

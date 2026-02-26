@@ -102,7 +102,7 @@ void Init_I2C_Transaction(I2C_TypeDef *I2Cx, int RW, uint8_t Addr, uint8_t NumBy
     I2Cx->CR2 |= ((Addr & 0x7F) << 1); // Set SADD (7-bit address goes in bits 7:1)
     I2Cx->CR2 |= ((NumBytes & 0xFF) << 16); // Set NBYTES (8 bit value)
     I2Cx->CR2 |= ((RW & 0x1) << 10); // Set read/write bit (Write = 0, Read = 1)
-    I2C2->CR2 |= (1 << 13); // Set START bit
+    I2Cx->CR2 |= (1 << 13); // Set START bit
 }
 /*
 void My_HAL_GPIO_DeInit(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
@@ -123,9 +123,9 @@ GPIO_PinState My_HAL_GPIO_ReadPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
 void My_HAL_GPIO_WritePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState)
 {
     if (PinState == GPIO_PIN_SET) {
-        GPIOx->BSRR |= GPIO_Pin; // Set the ODR reg for the passed pin
+        GPIOx->BSRR = GPIO_Pin; // Set the ODR reg for the passed pin
     } else {
-        GPIOx->BSRR &= ~GPIO_Pin; // Reset the ODR reg for the passed pin
+        GPIOx->BSRR = ((uint32_t)GPIO_Pin << 16); // Write to the upper 16 bits to reset
     }
 }
 
