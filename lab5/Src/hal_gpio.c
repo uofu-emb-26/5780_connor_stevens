@@ -71,7 +71,6 @@ void RCC_USART3_CLK_ENABLE(void)
     RCC->APB1ENR |= (1 << 18); // Sets bit 18 (USART3) to 1
 }
 
-
 void EXTI_Setup(EXTI_TypeDef *EXTI0, SYSCFG_TypeDef *EXTICR) {
     EXTI0->IMR |= 0x1; //unmask interupt generation for line0
     EXTI0->RTSR |= 0x1; //enable rising trigger detection for line0
@@ -98,12 +97,15 @@ void I2Cx_Setup(I2C_TypeDef *I2Cx) {
 }
 
 void Init_I2C_Transaction(I2C_TypeDef *I2Cx, int RW, uint8_t Addr, uint8_t NumBytes) {
-    I2Cx->CR2 &= ~((0x7f << 16) | (0x3FF) | (1 << 25)); //clear NBYTES, SADD field, and Reset AUTOEND
+    //clear NBYTES, SADD field, Reset AUTOEND, STOP, START, and R/W
+    I2Cx->CR2 &= ~((0xFF << 16) | (0x7F << 1) | (1U << 25) | (1U << 14) | (1U << 13) | (1U << 10)); 
+    
     I2Cx->CR2 |= ((Addr & 0x7F) << 1); // Set SADD (7-bit address goes in bits 7:1)
     I2Cx->CR2 |= ((NumBytes & 0xFF) << 16); // Set NBYTES (8 bit value)
-    I2Cx->CR2 |= ((RW & 0x1) << 10); // Set read/write bit (Write = 0, Read = 1)
-    I2Cx->CR2 |= (1 << 13); // Set START bit
+    if (RW) I2Cx->CR2 |= (1U << 10);   // Set read/write bit (Write = 0, Read = 1)
+    I2Cx->CR2 |= (1U << 13); // Set START bit
 }
+
 /*
 void My_HAL_GPIO_DeInit(GPIO_TypeDef  *GPIOx, uint32_t GPIO_Pin)
 {
@@ -119,7 +121,6 @@ GPIO_PinState My_HAL_GPIO_ReadPin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
     }
 }
 
-
 void My_HAL_GPIO_WritePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState)
 {
     if (PinState == GPIO_PIN_SET) {
@@ -128,7 +129,6 @@ void My_HAL_GPIO_WritePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, GPIO_PinState 
         GPIOx->BSRR = ((uint32_t)GPIO_Pin << 16); // Write to the upper 16 bits to reset
     }
 }
-
 
 void My_HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
 {
