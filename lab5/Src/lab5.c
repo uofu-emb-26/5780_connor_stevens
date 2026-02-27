@@ -8,6 +8,7 @@
   #include "core_cm0.h"
   #include "stm32f0xx_hal_gpio_ex.h"
   #include "stm32f0xx_hal_rcc.h"
+  #include <stdlib.h>
 
   void SystemClock_Config(void);
   volatile uint8_t receiveReg;
@@ -161,8 +162,14 @@
       else {
         XFull = (int16_t)((uint16_t)Xlow | ((uint16_t)XHigh << 8));
         YFull = (int16_t)((uint16_t)Ylow | ((uint16_t)YHigh << 8));
-        XCount = (XFull > 0 && (XFull > 100 || XFull < 100)) ? XCount + 1 : XCount - 1;
-        YCount = (YFull > 0 && (XFull > 100 || XFull < 100)) ? YCount + 1 : YCount - 1;
+
+        if (abs(XFull) > 100) {
+          XCount += (XFull > 0) ? 1 : -1;
+        }
+        if (abs(YFull) > 100) {
+          YCount += (YFull > 0) ? 1 : -1;
+        }
+
         char buffer[128];
         sprintf(buffer, "X: %d | Y: %d\r\n", XFull, YFull);
         sendString(buffer);
