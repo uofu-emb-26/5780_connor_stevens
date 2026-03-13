@@ -172,5 +172,6 @@ void ADC_Configuration(void) {
     ADC1->CFGR1 &= ~(0x3 << 10); // clear hardware trigger bits (software only)
     ADC1->CFGR1 &= ~(0x3 << 3); // Clear resolution bits
     ADC1->CFGR1 |= (1 << 4); // set 4:3 to 10 (8 bit resoltuion)
+    ADC1->CFGR1 &= ~(1 << 5); // clear bit 5 (right aligned data)
 }
 

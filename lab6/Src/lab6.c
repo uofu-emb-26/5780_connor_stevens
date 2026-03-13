@@ -48,19 +48,48 @@ int main(void)
   assert(((ADC1->CFGR1 >> 10) & 0x3) == 0x0); // check hardware trigger disabled (00)
   assert(((ADC1->CFGR1 >> 3) & 0x3) == 0x2); // check 8 bit resolution (10)
   assert(((ADC1->CHSELR >> 10) & 0x1) == 0x1); // check channel 10 is enabled
+  assert(((ADC1->CHSELR >> 5) & 0x1) == 0x0); // check right aligned data
 
   ADC1->CR |= (1 << 31); // Start calibration process
-  while (((ADC1->CR >> 31) & 0x1) == 0x0) {} // Wait for calibration process to complete
+  while (((ADC1->CR >> 31) & 0x1) == 0x1) {} // Wait for calibration process to complete
 
   ADC1->CR |= 0x1; // Enable ADC
-  while (((ADC1->ISR) & 0x1) == 0x0) {} // Wait for ADC to enable
+  while (((ADC1->ISR) & 0x1) == 0x1) {} // Wait for ADC to enable
 
   ADC1->CR |= (1 << 2); // Start ADC conversion
 
+  uint8_t ADCVin;
   while (1)
   {
-    HAL_Delay(300);
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+    HAL_Delay(1);
+    ADCVin = ADC1->DR;
+    if (ADCVin >= 0xD4) { // if Vin is >= 2.5V Turn on all LEDs
+      GPIOC->ODR |= GPIO_PIN_7;
+      GPIOC->ODR |= GPIO_PIN_6;
+      GPIOC->ODR |= GPIO_PIN_8;
+      GPIOC->ODR |= GPIO_PIN_9;    
+    }
+    else if ((ADCVin >= 0x7F) && (ADCVin < 0xD4)) { // if Vin is >= 1.5V
+      GPIOC->ODR |= GPIO_PIN_6; // Turn on Blue LED
+      GPIOC->ODR &= ~GPIO_PIN_9;
+    }
+    else if ((ADCVin >= 0x55) && (ADCVin < 0x7F)) { // if Vin is >= 1V
+      GPIOC->ODR &= ~GPIO_PIN_6; // Turn on orange LED
+      GPIOC->ODR |= GPIO_PIN_8;
+      GPIOC->ODR &= ~GPIO_PIN_9;
+    }
+    else if ((ADCVin >= 0x2A) && (ADCVin < 0x55)) { // if Vin is >= 0.5V
+      GPIOC->ODR |= GPIO_PIN_7; // Turn on Red LED
+      GPIOC->ODR &= ~GPIO_PIN_6;
+      GPIOC->ODR &= ~GPIO_PIN_8;
+      GPIOC->ODR &= ~GPIO_PIN_9;
+    }
+    else { // Turn off all LEDs
+      GPIOC->ODR &= ~GPIO_PIN_7;
+      GPIOC->ODR &= ~GPIO_PIN_6;
+      GPIOC->ODR &= ~GPIO_PIN_8;
+      GPIOC->ODR &= ~GPIO_PIN_9;
+    }
   }
   return -1;
 }
