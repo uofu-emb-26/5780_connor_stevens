@@ -23,12 +23,19 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
   HAL_RCC_GPIOC_CLK_ENABLE();
+  HAL_RCC_GPIOB_CLK_ENABLE();
+  HAL_RCC_GPIOA_CLK_ENABLE();
   RCC_ADC_CLK_ENABLE();
+  RCC_DAC_CLK_ENABLE();
 
   //Setup ALL LEDs and PC0
   GPIO_InitTypeDef iniStr1 = {GPIO_PIN_8 | GPIO_PIN_7 |GPIO_PIN_6 | GPIO_PIN_9 | GPIO_PIN_0,
                             GPIO_MODE_OUTPUT_PP,
                             GPIO_NOPULL,
+                            GPIO_SPEED_FREQ_LOW};
+  GPIO_InitTypeDef iniStr2 = {GPIO_PIN_4,
+                             GPIO_MODE_ANALOG,
+                             GPIO_NOPULL,
                             GPIO_SPEED_FREQ_LOW};
   My_HAL_GPIOx_Init(GPIOC, &iniStr1);
   GPIOC->MODER |= 0x3; // Set PC0 to analog mode (11)
@@ -39,7 +46,6 @@ int main(void)
   assert(((GPIOC->MODER >> (9*2)) & 0x3) == 0x1); //assert PC9 is in output mode (01)
   assert(((GPIOC->MODER) & 0x3) == 0x3); //assert PC0 is in analog mode (11)
   assert(((GPIOC->PUPDR) & 0x3) == 0x0); //assert PC0 is in no pull/push (00)
-
 
   ADC_Configuration();
   ADC1->CHSELR |= (1 << 10); // set ADC channel to 10
@@ -58,10 +64,29 @@ int main(void)
 
   ADC1->CR |= (1 << 2); // Start ADC conversion
 
+  My_HAL_GPIOx_Init(GPIOA, &iniStr2);
+  assert(((GPIOA->MODER >> (8)) & 0x3) == 0x3); //assert PA4 is in analog mode (11)
+
+  DAC_Configuration();
+  uint8_t sineWave[32] = {125, 150, 175, 190, 220, 230, 245, 250, 255, 250, 245, 
+    230, 220, 190, 175, 150, 125, 100, 
+    75, 55, 40, 20, 10, 1, 0, 1, 10, 
+    20, 40, 55, 75, 100};
+
+  sendString(newFlash);
   uint8_t ADCVin;
+  int waveIndex = 0;
   while (1)
   {
-    HAL_Delay(1);
+    HAL_Delay(0.5);
+    DAC1->DHR8R1 = sineWave[waveIndex]; // Place sine wave value in data holding register
+    if (waveIndex == 31) {
+      waveIndex = 0;
+    } else {waveIndex++;}
+
+    DAC1->SWTRIGR |= 1; // enable Channel 1 software trigger
+    while((DAC1->SWTRIGR & 0x1) == 1) {} // Do nothing while data is loader into output register
+
     ADCVin = ADC1->DR;
     if (ADCVin >= 0xD4) { // if Vin is >= 2.5V Turn on all LEDs
       GPIOC->ODR |= GPIO_PIN_7;

@@ -76,6 +76,11 @@ void RCC_ADC_CLK_ENABLE(void)
     RCC->APB2ENR |= (1 << 9);
 }
 
+void RCC_DAC_CLK_ENABLE(void)
+{
+    RCC->APB1ENR |= (1 << 29);
+}
+
 void EXTI_Setup(EXTI_TypeDef *EXTI0, SYSCFG_TypeDef *EXTICR) {
     EXTI0->IMR |= 0x1; //unmask interupt generation for line0
     EXTI0->RTSR |= 0x1; //enable rising trigger detection for line0
@@ -173,5 +178,11 @@ void ADC_Configuration(void) {
     ADC1->CFGR1 &= ~(0x3 << 3); // Clear resolution bits
     ADC1->CFGR1 |= (1 << 4); // set 4:3 to 10 (8 bit resoltuion)
     ADC1->CFGR1 &= ~(1 << 5); // clear bit 5 (right aligned data)
+}
+
+void DAC_Configuration(void) {
+    DAC1->CR |= 1; // Enable DAC channel 1
+    DAC1->CR |= (1 << 2); // Enable Trigger 
+    DAC1->CR |= (0x7 << 3); // Set trigger selection to software
 }
 
