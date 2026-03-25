@@ -73,7 +73,6 @@ int main(void)
     75, 55, 40, 20, 10, 1, 0, 1, 10, 
     20, 40, 55, 75, 100};
 
-  sendString(newFlash);
   uint8_t ADCVin;
   int waveIndex = 0;
   while (1)
