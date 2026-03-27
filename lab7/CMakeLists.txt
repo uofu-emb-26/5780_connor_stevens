@@ -5,8 +5,6 @@ add_executable(lab7
     Src/stm32f0xx_it.c
     Src/hal_gpio.c
     Src/motor.c
-    Src/SEGGER_RTT_printf.c
-    Src/SEGGER_RTT.c
 )
 
 # Add the map file to the list of files to be removed with 'clean' target
@@ -24,6 +22,7 @@ target_compile_definitions(lab7 PRIVATE
 # Add linked libraries
 target_link_libraries(lab7
     STM32_Drivers
+    SEGGER_RTT
 )
 
 flash_target(lab7)

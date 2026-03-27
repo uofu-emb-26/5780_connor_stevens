@@ -13,6 +13,9 @@ volatile int8_t adc_value = 0;      	// ADC measured motor current
 volatile int16_t error = 0;         	// Speed error signal
 volatile uint8_t Kp = 1;            	// Proportional gain
 volatile uint8_t Ki = 1;            	// Integral gain
+static uint8_t buf0[1024];
+static uint8_t buf1[1024];
+static uint8_t buf2[1024];
 
 // Sets up the entire motor drive system
 void motor_init(void) {
@@ -54,6 +57,12 @@ void pwm_init(void) {
     TIM14->CCR1 = 0;                        // Start PWM at 0% duty cycle
     
     TIM14->CR1 |= TIM_CR1_CEN;              // Enable timer
+}
+
+void log_init(void) {
+    SEGGER_RTT_ConfigUpBuffer(0, "", buf0, 1024, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+    SEGGER_RTT_ConfigUpBuffer(1, "", buf1, 1024, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+    SEGGER_RTT_ConfigUpBuffer(2, "", buf2, 1024, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
 }
 
 // Set the duty cycle of the PWM, accepts (0-100)
@@ -109,23 +118,25 @@ union byte_split {
     uint8_t bytes[4];
 };
 
-void log_data(void) {
-    // Begin critical section
-    __disable_irq();
-    uint32_t duty_cycle_copy = duty_cycle;    
-    int32_t target_rpm_copy = target_rpm;
-    int32_t motor_speed_copy = motor_speed;
-    // End critical section
-    __enable_irq();
 
-    union byte_split data;
-    data.uword = duty_cycle_copy;
-    SEGGER_RTT_Write (0, &data.bytes, 4);
-    data.word = target_rpm_copy;
-    SEGGER_RTT_Write (1, &data.bytes, 4);
-    data.word = motor_speed_copy;
-    SEGGER_RTT_Write (2, &data.bytes, 4);
+void log_data(void) {
+// Begin critical section
+__disable_irq();
+uint32_t duty_cycle_copy = duty_cycle;
+int32_t target_rpm_copy = target_rpm;
+int32_t motor_speed_copy = motor_speed;
+// End critical section
+__enable_irq();
+
+union byte_split data;
+data.uword = duty_cycle_copy;
+SEGGER_RTT_Write (0, &data.bytes, 4);
+data.word = target_rpm_copy;
+SEGGER_RTT_Write (1, &data.bytes, 4);
+data.word = motor_speed_copy;
+SEGGER_RTT_Write (2, &data.bytes, 4);
 }
+
 
 // Encoder interrupt to calculate motor speed, also manages PI controller
 void TIM6_DAC_IRQHandler(void) {
@@ -138,7 +149,7 @@ void TIM6_DAC_IRQHandler(void) {
     
     // Call the PI update function
     PI_update();
-    log_data();
+    log_data(); 
     TIM6->SR &= ~TIM_SR_UIF;        // Acknowledge the interrupt
 }
 
@@ -195,10 +206,10 @@ void PI_update(void) {
      // So target_rpm * 3200 = pulses per minute which is the same units as motor speed per minute
      // Target rpm conversion is twice as much as motor_speed's conversion 
      // So just multiply target_rpm by 2 to get pulses per interrupt
-    int16_t error = (target_rpm * 2) - motor_speed; // error in terms of pulses per interrupt
-    
+//    int16_t error = ((target_rpm * 8) / 10) - motor_speed; // error in terms of pulses per interrupt
+      int16_t error = (target_rpm * 0.8)- motor_speed;
     /// TODO: Calculate integral portion of PI controller, write to "error_integral" variable
-    error_integral += error_integral + (Ki * error);
+    error_integral += Ki * error;
     
     /// TODO: Clamp the value of the integral to a limited positive range
     

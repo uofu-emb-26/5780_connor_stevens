@@ -1,9 +1,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "stm32f072xb.h"
 #include "stm32f0xx.h"
 #include "motor.h"
 #include "SEGGER_RTT.h"
+#include "hal_gpio.h"
 
 /* -------------------------------------------------------------------------------------------------------------
  *  Global Variable Declarations
@@ -32,8 +34,8 @@ void  button_init(void) {
     // Initialize PA0 for button input
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN;                                          // Enable peripheral clock to GPIOA
     GPIOA->MODER &= ~(GPIO_MODER_MODER0_0 | GPIO_MODER_MODER0_1);               // Set PA0 to input
-    GPIOC->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEEDR0_0 | GPIO_OSPEEDR_OSPEEDR0_1);     // Set to low speed
-    GPIOC->PUPDR |= GPIO_PUPDR_PUPDR0_1;                                        // Set to pull-down
+    GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEEDR0_0 | GPIO_OSPEEDR_OSPEEDR0_1);     // Set to low speed
+    GPIOA->PUPDR |= GPIO_PUPDR_PUPDR0_1;                                        // Set to pull-down
 }
 
 /* Called by SysTick Interrupt
@@ -48,9 +50,11 @@ void Lab7_Systick_Callback(void) {
     if(GPIOA->IDR & (1 << 0)) {
         debouncer |= 0x1;
     }
+   
 
     if(debouncer == 0x7FFFFFFF) {
         // Begin critical section
+        My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
         __disable_irq();
         switch(target_rpm) {
             case 80:
@@ -86,13 +90,13 @@ int main(void) {
     HAL_Init();                             // Initialize HAL internals
     LED_init();                             // Initialize LED's
     button_init();                          // Initialize button
+    log_init();
     motor_init();                           // Initialize motor code
 
     while (1) {
         GPIOC->ODR ^= GPIO_ODR_9;           // Toggle green LED (heartbeat)
         encoder_count = TIM2->CNT;
         HAL_Delay(128);                      // Delay 1/8 second
-        My_HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
     }
 }
 

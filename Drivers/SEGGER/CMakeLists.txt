@@ -11,3 +11,4 @@ target_sources(SEGGER_RTT PRIVATE
     Src/SEGGER_RTT.c
     Src/SEGGER_RTT_printf.c
 )
+target_compile_options(SEGGER_RTT PRIVATE -g)
