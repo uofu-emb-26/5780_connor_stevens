@@ -11,8 +11,9 @@ volatile int16_t target_rpm = 0;    	// Desired speed target
 volatile int16_t motor_speed = 0;   	// Measured motor speed
 volatile int8_t adc_value = 0;      	// ADC measured motor current
 volatile int16_t error = 0;         	// Speed error signal
-volatile uint8_t Kp = 1;            	// Proportional gain
-volatile uint8_t Ki = 1;            	// Integral gain
+volatile float Kp = 1;            	// Proportional gain
+volatile float Ki = 2.5;            	// Integral gain
+volatile int32_t integral_clamp = 6400;
 static uint8_t buf0[1024];
 static uint8_t buf1[1024];
 static uint8_t buf2[1024];
@@ -124,7 +125,7 @@ void log_data(void) {
 __disable_irq();
 uint32_t duty_cycle_copy = duty_cycle;
 int32_t target_rpm_copy = target_rpm;
-int32_t motor_speed_copy = motor_speed;
+int32_t motor_speed_copy = motor_speed * 1.25;
 // End critical section
 __enable_irq();
 
@@ -206,10 +207,11 @@ void PI_update(void) {
      // So target_rpm * 3200 = pulses per minute which is the same units as motor speed per minute
      // Target rpm conversion is twice as much as motor_speed's conversion 
      // So just multiply target_rpm by 2 to get pulses per interrupt
-//    int16_t error = ((target_rpm * 8) / 10) - motor_speed; // error in terms of pulses per interrupt
-      int16_t error = (target_rpm * 0.8)- motor_speed;
+ //   int16_t error = ((target_rpm * 8) / 10) - motor_speed; // error in terms of pulses per interrupt
+    int16_t error = (target_rpm * 0.8) - motor_speed; 
+
     /// TODO: Calculate integral portion of PI controller, write to "error_integral" variable
-    error_integral += Ki * error;
+    error_integral += error;
     
     /// TODO: Clamp the value of the integral to a limited positive range
     
@@ -218,14 +220,14 @@ void PI_update(void) {
      *       but affects the PI tuning.
      *       Recommend that you clamp between 0 and 3200 (what is used in the lab solution)
      */
-    if (error_integral >= 3200)
-        error_integral = 3200;
-    else if (error_integral <= 0) 
-        error_integral = 0;
+    if (error_integral >= integral_clamp)
+        error_integral = integral_clamp;
+    else if (error_integral <= -integral_clamp) 
+        error_integral = -integral_clamp;
     
     /// TODO: Calculate proportional portion, add integral and write to "output" variable
     
-    int16_t output = (error * Kp) + error_integral; // adds proportional to integral outputs
+    int32_t output = (error * Kp) + (error_integral * Ki); // adds proportional to integral outputs
     
     /* Because the calculated values for the PI controller are significantly larger than 
      * the allowable range for duty cycle, you'll need to divide the result down into 

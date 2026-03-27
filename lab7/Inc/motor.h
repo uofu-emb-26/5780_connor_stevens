@@ -16,8 +16,8 @@ extern volatile int16_t target_rpm;    // Desired speed target
 extern volatile int16_t motor_speed;   // Measured motor speed
 extern volatile int8_t adc_value;      // ADC measured motor current
 extern volatile int16_t error;         // Speed error signal
-extern volatile uint8_t Kp;            // Proportional gain
-extern volatile uint8_t Ki;            // Integral gain
+extern volatile float Kp;            // Proportional gain
+extern volatile float Ki;            // Integral gain
 
 
 /* -------------------------------------------------------------------------------------------------------------
